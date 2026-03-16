@@ -137,8 +137,8 @@ LANG_TEXT = {
         "contact": (
             "*Контакти Telebotix*\n\n"
             "Хочете бота для свого бізнесу?\n\n"
-            "Telegram: @yourusername\n"
-            "Email: hello@telebotix.com"
+            "Telegram: @o_s_h_t\n"
+            "Email: telebotix.studio@gmail.com"
         ),
         "back_to_menu": "Скористайтесь меню нижче або введіть /start, щоб повернутися в головне меню.",
         "language_changed": "Мову успішно змінено.",
