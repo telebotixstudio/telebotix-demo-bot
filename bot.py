@@ -18,7 +18,7 @@ from telegram.ext import (
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 GOOGLE_SCRIPT_URL = os.getenv("GOOGLE_SCRIPT_URL")
-SUPPORT_TELEGRAM = os.getenv("SUPPORT_TELEGRAM", "@telebotix_contact")
+SUPPORT_TELEGRAM = os.getenv("SUPPORT_TELEGRAM", "@o_s_h_t")
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "telebotix.studio@gmail.com")
 
 if not BOT_TOKEN:
