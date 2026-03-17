@@ -191,7 +191,7 @@ async def show_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = get_lang(context)
     await update.message.reply_text(
         LANG_TEXT[lang]["welcome"],
-        parse_mode="Markdown",
+        #parse_mode="Markdown",
         reply_markup=build_main_menu(lang)
     )
 
@@ -311,7 +311,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_text in ["💼 Business Cases", "💼 Приклади для бізнесу"]:
         await update.message.reply_text(
             LANG_TEXT[lang]["use_cases"],
-            parse_mode="Markdown",
+            #parse_mode="Markdown",
             reply_markup=build_main_menu(lang)
         )
         return
@@ -319,7 +319,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_text in ["💰 Request Estimate", "💰 Отримати оцінку"]:
         await update.message.reply_text(
             LANG_TEXT[lang]["estimate"],
-            parse_mode="Markdown",
+            #parse_mode="Markdown",
             reply_markup=build_main_menu(lang)
         )
         return
@@ -327,7 +327,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_text in ["📩 Contact", "📩 Контакти"]:
         await update.message.reply_text(
             LANG_TEXT[lang]["contact"],
-            parse_mode="Markdown",
+            #parse_mode="Markdown",
             reply_markup=build_main_menu(lang)
         )
         return
