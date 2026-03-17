@@ -1,359 +1,135 @@
-import os
-from datetime import datetime
-
-import requests
-from dotenv import load_dotenv
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-load_dotenv()
+# ====== CONFIG ======
+ADMIN_CHAT_ID = "YOUR_CHAT_ID"
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
-GOOGLE_SCRIPT_URL = os.getenv("GOOGLE_SCRIPT_URL")
+# ====== STATE ======
+user_data_store = {}
 
-
-LANG_TEXT = {
+# ====== TEXTS ======
+TEXTS = {
     "en": {
-        "choose_language": "Choose your language",
-        "welcome": (
-            "Welcome to *Telebotix*\n\n"
-            "We build Telegram bots that help businesses capture and organize customer requests automatically.\n\n"
-            "This demo shows how a business bot can work for your company."
-        ),
-        "menu": [
-            ["🚀 Try Live Demo"],
-            ["💼 Business Cases", "💰 Request Estimate"],
-            ["📩 Contact", "🌐 Change Language"]
-        ],
-        "demo_intro": "Let’s simulate a real customer request. Please answer a few quick questions.",
-        "business_question": "What type of business do you run?",
-        "business_options": [
-            "💅 Beauty / Salon",
-            "🚗 Auto Service",
-            "🏥 Clinic / Dental",
-            "🏢 Agency / Services",
-            "🛍️ E-commerce",
-            "Other"
-        ],
-        "goal_question": "What would you like to automate?",
-        "goal_options": [
-            "Lead capture",
-            "Appointment requests",
-            "Customer support",
-            "Product inquiries",
-            "Internal requests"
-        ],
-        "contact_question": "How should we contact you? Leave your Telegram, phone number, or email.",
-        "demo_success": (
-            "✅ Request received.\n\n"
-            "A Telebotix specialist will contact you soon.\n\n"
-            "You can continue exploring more use cases below."
-        ),
-        "use_cases": (
-            "*Business Cases*\n\n"
-            "Here are examples of bots we can build:\n\n"
-            "• Lead Capture Bot\n"
-            "• Appointment Booking Bot\n"
-            "• FAQ / Support Bot\n"
-            "• Product Inquiry Bot\n"
-            "• Internal Team Request Bot"
-        ),
-        "estimate": (
-            "*Request Estimate*\n\n"
-            "Every business is different, so we prepare a custom estimate based on:\n\n"
-            "• your business type\n"
-            "• automation complexity\n"
-            "• integrations needed\n"
-            "• support level\n\n"
-            "Send us your request and we’ll suggest the right setup."
-        ),
-        "contact": (
-            "*Contact Telebotix*\n\n"
-            "Interested in a bot for your business?\n\n"
-            "Telegram: @o_s_h_t\n"
-            "Email: telebotix.studio@gmail.com"
-        ),
-        "back_to_menu": "Use the menu below or type /start to return to the main menu.",
-        "language_changed": "Language changed successfully.",
-        "new_lead": "New Demo Lead",
-        "source": "telegram_bot",
-        "lang_label": "EN"
+        "welcome": "👋 Welcome to Telebotix Studio\n\nWe build Telegram bots that help businesses capture leads, automate requests and respond faster.\n\nWhat would you like to explore?",
+        "menu": [["🚀 Try demo", "📦 Use cases"], ["💼 Get a bot", "ℹ️ About"], ["🌐 Change language"]],
+        "demo_start": "Great. Let's simulate a real client request.\n\nWhat type of business do you have?",
+        "business_types": [["💅 Beauty / Salon", "🚗 Auto service"], ["🏥 Clinic", "⬅️ Back"]],
+        "need": "What would you like to automate?",
+        "needs": [["📅 Booking", "📥 Lead collection"], ["💬 Customer requests", "⬅️ Back"]],
+        "name": "Please enter your name:",
+        "contact": "Now enter your contact (Telegram / phone):",
+        "done": "✅ Done!\n\nThis is how your future clients will interact with your bot.\n\nWe capture structured requests automatically.",
+        "about": "We create simple and effective Telegram bots for businesses.\n\nFocus: lead capture, booking flows, automation.",
+        "cases": "Examples:\n\n• Beauty salons\n• Auto services\n• Clinics\n• Local businesses",
+        "get_bot": "Tell us briefly about your business:",
+        "fallback": "Sorry, I didn't understand that.\nPlease use the buttons below 👇",
     },
     "ua": {
-        "choose_language": "Оберіть мову",
-        "welcome": (
-            "Вітаємо в *Telebotix*\n\n"
-            "Ми створюємо Telegram-ботів, які допомагають бізнесу автоматично збирати та структурувати звернення клієнтів.\n\n"
-            "Це демо показує, як такий бот може працювати для вашої компанії."
-        ),
-        "menu": [
-            ["🚀 Спробувати демо"],
-            ["💼 Приклади для бізнесу", "💰 Отримати оцінку"],
-            ["📩 Контакти", "🌐 Змінити мову"]
-        ],
-        "demo_intro": "Давайте змоделюємо реальне звернення клієнта. Дайте відповіді на кілька коротких питань.",
-        "business_question": "Який у вас тип бізнесу?",
-        "business_options": [
-            "💅 Б'юті / Салон",
-            "🚗 Автосервіс",
-            "🏥 Клініка / Стоматологія",
-            "🏢 Агенція / Послуги",
-            "🛍️ E-commerce",
-            "Інше"
-        ],
-        "goal_question": "Що саме ви хочете автоматизувати?",
-        "goal_options": [
-            "Збір заявок",
-            "Запис на послугу",
-            "Підтримка клієнтів",
-            "Запити по товарах",
-            "Внутрішні звернення"
-        ],
-        "contact_question": "Як з вами зв’язатися? Залиште Telegram, номер телефону або email.",
-        "demo_success": (
-            "✅ Заявку отримано.\n\n"
-            "Спеціаліст Telebotix зв’яжеться з вами найближчим часом.\n\n"
-            "Нижче можете переглянути інші варіанти автоматизації."
-        ),
-        "use_cases": (
-            "*Приклади для бізнесу*\n\n"
-            "Ось які боти ми можемо створити:\n\n"
-            "• Бот для збору заявок\n"
-            "• Бот для запису на послугу\n"
-            "• FAQ / Support бот\n"
-            "• Бот для запитів по товарах\n"
-            "• Бот для внутрішніх звернень команди"
-        ),
-        "estimate": (
-            "*Отримати оцінку*\n\n"
-            "Кожен бізнес індивідуальний, тому ми формуємо вартість залежно від:\n\n"
-            "• типу бізнесу\n"
-            "• складності автоматизації\n"
-            "• потрібних інтеграцій\n"
-            "• рівня підтримки\n\n"
-            "Надішліть запит, і ми запропонуємо оптимальне рішення."
-        ),
-        "contact": (
-            "*Контакти Telebotix*\n\n"
-            "Хочете бота для свого бізнесу?\n\n"
-            "Telegram: @o_s_h_t\n"
-            "Email: telebotix.studio@gmail.com"
-        ),
-        "back_to_menu": "Скористайтесь меню нижче або введіть /start, щоб повернутися в головне меню.",
-        "language_changed": "Мову успішно змінено.",
-        "new_lead": "Новий демо-лід",
-        "source": "telegram_bot",
-        "lang_label": "UA"
+        "welcome": "👋 Вітаємо в Telebotix Studio\n\nМи створюємо Telegram-боти, які допомагають бізнесу збирати заявки, автоматизувати запити та швидше відповідати клієнтам.\n\nЩо вас цікавить?",
+        "menu": [["🚀 Спробувати демо", "📦 Приклади"], ["💼 Замовити бота", "ℹ️ Про нас"], ["🌐 Змінити мову"]],
+        "demo_start": "Супер. Змоделюємо реальний запит клієнта.\n\nЯкий у вас бізнес?",
+        "business_types": [["💅 Салон краси", "🚗 СТО"], ["🏥 Клініка", "⬅️ Назад"]],
+        "need": "Що хочете автоматизувати?",
+        "needs": [["📅 Запис", "📥 Заявки"], ["💬 Запити клієнтів", "⬅️ Назад"]],
+        "name": "Введіть ваше ім’я:",
+        "contact": "Введіть контакт (Telegram / телефон):",
+        "done": "✅ Готово!\n\nТак виглядатиме взаємодія ваших клієнтів з ботом.\n\nЗаявки автоматично структуруються.",
+        "about": "Ми створюємо прості та ефективні Telegram-боти для бізнесу.\n\nОсновне: заявки, записи, автоматизація.",
+        "cases": "Приклади:\n\n• Салони\n• СТО\n• Клініки\n• Локальний бізнес",
+        "get_bot": "Коротко опишіть ваш бізнес:",
+        "fallback": "Вибачте, я не зрозумів.\nСкористайтесь кнопками нижче 👇",
     }
 }
 
+# ====== HELPERS ======
+def get_lang(user_id):
+    return user_data_store.get(user_id, {}).get("lang", "en")
 
-def get_lang(context):
-    return context.user_data.get("lang", "en")
+def set_lang(user_id, lang):
+    user_data_store.setdefault(user_id, {})["lang"] = lang
 
+def get_text(user_id, key):
+    lang = get_lang(user_id)
+    return TEXTS[lang][key]
 
-def get_text(context, key):
-    lang = get_lang(context)
-    return LANG_TEXT[lang][key]
+def get_menu(user_id):
+    lang = get_lang(user_id)
+    return ReplyKeyboardMarkup(TEXTS[lang]["menu"], resize_keyboard=True)
 
-
-def build_main_menu(lang):
-    return ReplyKeyboardMarkup(LANG_TEXT[lang]["menu"], resize_keyboard=True)
-
-
-def send_to_google_sheet(data: dict):
-    if not GOOGLE_SCRIPT_URL:
-        print("GOOGLE_SCRIPT_URL is missing")
-        return
-
-    try:
-        response = requests.post(GOOGLE_SCRIPT_URL, json=data, timeout=10)
-        print("Google Sheets response:", response.status_code, response.text)
-    except Exception as e:
-        print("Error sending to Google Sheets:", e)
-
-
-async def show_language_picker(update: Update):
-    keyboard = ReplyKeyboardMarkup(
-        [["🇬🇧 English", "🇺🇦 Українська"]],
-        resize_keyboard=True
-    )
-    await update.message.reply_text("Choose your language / Оберіть мову", reply_markup=keyboard)
-
-
+# ====== HANDLERS ======
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["step"] = None
-    await show_language_picker(update)
+    user_id = update.effective_user.id
+    set_lang(user_id, "en")
+    await update.message.reply_text(get_text(user_id, "welcome"), reply_markup=get_menu(user_id))
 
+async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    text = update.message.text
 
-async def show_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = get_lang(context)
-    await update.message.reply_text(
-        LANG_TEXT[lang]["welcome"],
-        #parse_mode="Markdown",
-        reply_markup=build_main_menu(lang)
-    )
+    lang = get_lang(user_id)
 
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text
-    lang = get_lang(context)
-
-    if user_text == "🇬🇧 English":
-        context.user_data["lang"] = "en"
-        context.user_data["step"] = None
-        await update.message.reply_text(
-            LANG_TEXT["en"]["language_changed"],
-            reply_markup=build_main_menu("en")
-        )
-        await show_welcome(update, context)
+    # ===== MENU =====
+    if "demo" in text.lower() or "демо" in text.lower():
+        await update.message.reply_text(get_text(user_id, "demo_start"),
+            reply_markup=ReplyKeyboardMarkup(TEXTS[lang]["business_types"], resize_keyboard=True))
         return
 
-    if user_text == "🇺🇦 Українська":
-        context.user_data["lang"] = "ua"
-        context.user_data["step"] = None
-        await update.message.reply_text(
-            LANG_TEXT["ua"]["language_changed"],
-            reply_markup=build_main_menu("ua")
-        )
-        await show_welcome(update, context)
+    if "use" in text.lower() or "приклади" in text.lower():
+        await update.message.reply_text(get_text(user_id, "cases"), reply_markup=get_menu(user_id))
         return
 
-    if user_text in ["🌐 Change Language", "🌐 Змінити мову"]:
-        context.user_data["step"] = None
-        await show_language_picker(update)
+    if "about" in text.lower() or "про" in text.lower():
+        await update.message.reply_text(get_text(user_id, "about"), reply_markup=get_menu(user_id))
         return
 
-    if user_text in ["🚀 Try Live Demo", "🚀 Спробувати демо"]:
-        context.user_data["step"] = "business"
-
-        business_keyboard = ReplyKeyboardMarkup(
-            [[option] for option in LANG_TEXT[lang]["business_options"]],
-            resize_keyboard=True
-        )
-
-        await update.message.reply_text(LANG_TEXT[lang]["demo_intro"])
-        await update.message.reply_text(
-            LANG_TEXT[lang]["business_question"],
-            reply_markup=business_keyboard
-        )
+    if "get bot" in text.lower() or "замовити" in text.lower():
+        user_data_store[user_id]["state"] = "lead"
+        await update.message.reply_text(get_text(user_id, "get_bot"))
         return
 
-    if context.user_data.get("step") == "business":
-        context.user_data["business"] = user_text
-        context.user_data["step"] = "goal"
-
-        goal_keyboard = ReplyKeyboardMarkup(
-            [[option] for option in LANG_TEXT[lang]["goal_options"]],
-            resize_keyboard=True
-        )
-
-        await update.message.reply_text(
-            LANG_TEXT[lang]["goal_question"],
-            reply_markup=goal_keyboard
-        )
+    if "language" in text.lower() or "мова" in text.lower():
+        new_lang = "ua" if lang == "en" else "en"
+        set_lang(user_id, new_lang)
+        await update.message.reply_text(get_text(user_id, "welcome"), reply_markup=get_menu(user_id))
         return
 
-    if context.user_data.get("step") == "goal":
-        context.user_data["goal"] = user_text
-        context.user_data["step"] = "contact"
-
-        await update.message.reply_text(
-            LANG_TEXT[lang]["contact_question"],
-            reply_markup=build_main_menu(lang)
-        )
+    if "beauty" in text.lower() or "салон" in text.lower() or "auto" in text.lower() or "сто" in text.lower():
+        await update.message.reply_text(get_text(user_id, "need"),
+            reply_markup=ReplyKeyboardMarkup(TEXTS[lang]["needs"], resize_keyboard=True))
         return
 
-    if context.user_data.get("step") == "contact":
-        context.user_data["contact"] = user_text
-        context.user_data["step"] = None
+    if "booking" in text.lower() or "запис" in text.lower():
+        user_data_store[user_id]["state"] = "name"
+        await update.message.reply_text(get_text(user_id, "name"))
+        return
 
-        username = update.message.from_user.username
-        username_text = f"@{username}" if username else "No username"
+    if user_data_store.get(user_id, {}).get("state") == "name":
+        user_data_store[user_id]["name"] = text
+        user_data_store[user_id]["state"] = "contact"
+        await update.message.reply_text(get_text(user_id, "contact"))
+        return
 
-        message = (
-            f"{LANG_TEXT[lang]['new_lead']}\n\n"
-            f"Business: {context.user_data['business']}\n"
-            f"Goal: {context.user_data['goal']}\n"
-            f"Contact: {context.user_data['contact']}\n"
-            f"User: {username_text}\n"
-            f"Language: {LANG_TEXT[lang]['lang_label']}"
-        )
+    if user_data_store.get(user_id, {}).get("state") == "contact":
+        name = user_data_store[user_id].get("name")
+        contact = text
 
         await context.bot.send_message(
             chat_id=ADMIN_CHAT_ID,
-            text=message
+            text=f"🔥 New lead\n\nName: {name}\nContact: {contact}"
         )
 
-        lead_data = {
-            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "language": LANG_TEXT[lang]["lang_label"],
-            "telegram_user": username_text,
-            "business_type": context.user_data["business"],
-            "automation_goal": context.user_data["goal"],
-            "contact_channel": "telegram",
-            "biggest_issue": "",
-            "contact_details": context.user_data["contact"],
-            "lead_status": "new",
-            "source": LANG_TEXT[lang]["source"],
-            "notes": ""
-        }
-
-        send_to_google_sheet(lead_data)
-
-        await update.message.reply_text(
-            LANG_TEXT[lang]["demo_success"],
-            reply_markup=build_main_menu(lang)
-        )
+        user_data_store[user_id]["state"] = None
+        await update.message.reply_text(get_text(user_id, "done"), reply_markup=get_menu(user_id))
         return
 
-    if user_text in ["💼 Business Cases", "💼 Приклади для бізнесу"]:
-        await update.message.reply_text(
-            LANG_TEXT[lang]["use_cases"],
-            #parse_mode="Markdown",
-            reply_markup=build_main_menu(lang)
-        )
-        return
+    # ===== FALLBACK =====
+    await update.message.reply_text(get_text(user_id, "fallback"), reply_markup=get_menu(user_id))
 
-    if user_text in ["💰 Request Estimate", "💰 Отримати оцінку"]:
-        await update.message.reply_text(
-            LANG_TEXT[lang]["estimate"],
-            #parse_mode="Markdown",
-            reply_markup=build_main_menu(lang)
-        )
-        return
+# ====== MAIN ======
+app = ApplicationBuilder().token("YOUR_BOT_TOKEN").build()
 
-    if user_text in ["📩 Contact", "📩 Контакти"]:
-        await update.message.reply_text(
-            LANG_TEXT[lang]["contact"],
-            #parse_mode="Markdown",
-            reply_markup=build_main_menu(lang)
-        )
-        return
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
-    await update.message.reply_text(
-        LANG_TEXT[lang]["back_to_menu"],
-        reply_markup=build_main_menu(lang)
-    )
-
-
-def main():
-    if not BOT_TOKEN:
-        raise ValueError("BOT_TOKEN is missing in .env")
-
-    if not ADMIN_CHAT_ID:
-        raise ValueError("ADMIN_CHAT_ID is missing in .env")
-
-    print("Bot is running...")
-
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    app.run_polling()
-
-
-if __name__ == "__main__":
-    main()
+print("Bot running...")
+app.run_polling()
